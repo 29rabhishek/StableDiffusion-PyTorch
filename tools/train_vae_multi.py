@@ -5,7 +5,6 @@ import random
 import torchvision
 import os
 import numpy as np
-from tqdm import tqdm
 from models.vae import VAE
 from torch.utils.data import DataLoader, DistributedSampler
 from dataset.mnist_dataset import MnistDataset
@@ -13,20 +12,34 @@ from dataset.celeb_dataset import CelebDataset
 from torch.optim import Adam
 from torchvision.utils import make_grid
 from utils.logger import setup_logger
-import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.cuda.amp import GradScaler, autocast
+from torch.distributed import init_process_group, destroy_process_group
+import torch.multiprocessing as mp
+os.environ["CUDA_VISIBLE_DEVICES"] = "2, 3, 4"
 
+
+
+def ddp_setup(rank, world_size):
+    """
+    Args:
+        rank: Unique identifier of each process
+        world_size: Total number of processes
+    """
+    os.environ["MASTER_ADDR"] = "localhost"
+    os.environ["MASTER_PORT"] = "12355"
+    init_process_group(backend="nccl", rank=rank, world_size=world_size)
+    torch.cuda.set_device(rank)
+
+    
 def kl_divergence_loss(mu, logvar):
     kl_loss = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
     return kl_loss
 
-def train(rank, args):
+def train(rank, world_size):
     # Initialize process group for distributed training
-    dist.init_process_group(backend='nccl', init_method='env://')
-    torch.cuda.set_device(rank)
-    
-    logger = setup_logger("VAE_logger", if_train=True)
+    ddp_setup(rank, world_size)
+
 
     with open(args.config_path, 'r') as file:
         try:
@@ -35,9 +48,14 @@ def train(rank, args):
             print(exc)
     print(config)
 
+
+
     dataset_config = config['dataset_params']
     autoencoder_config = config['autoencoder_params']
     train_config = config['train_params']
+
+    if rank == 0: 
+        logger = setup_logger("VAE_logger", save_dir=train_config['task_name'] , if_train=True)
 
     seed = train_config['seed']
     torch.manual_seed(seed)
@@ -64,7 +82,7 @@ def train(rank, args):
                              batch_size=train_config['autoencoder_batch_size'],
                              shuffle=False,  # No need to shuffle when using DistributedSampler
                              sampler=sampler)
-
+    
     if not os.path.exists(train_config['task_name']):
         os.mkdir(train_config['task_name'])
 
@@ -87,7 +105,7 @@ def train(rank, args):
 
         optimizer_g.zero_grad()
 
-        for im in tqdm(data_loader, desc=f"Epoch {epoch_idx+1}/{num_epochs}"):
+        for _, im in enumerate(data_loader):
             step_count += 1
             im = im.float().to(rank)
 
@@ -128,24 +146,20 @@ def train(rank, args):
                 scaler.step(optimizer_g)
                 scaler.update()
                 optimizer_g.zero_grad()
-
-        if rank == 0:  # Log only on the main process
-            logger.info(f'Epoch {epoch_idx+1}/{num_epochs} | '
-                        f'Total Loss: {np.mean(losses)} | '
-                        f'Recon Loss: {np.mean(recon_losses):.4f} | '
-                        f'KL Loss: {np.mean(kl_losses)}')
-
-            torch.save(model.module.state_dict(), os.path.join(train_config['task_name'],
-                                                              train_config['vae_autoencoder_ckpt_name']))
+        print(f'GPU[{rank}] epoch: {epoch_idx+1} | Total Loss: {np.mean(losses)} | Recon Loss : {np.mean(recon_loss):.4f} | KL Loss:  {np.mean(kl_losses)}')
+        if rank == 0:  # Log only on the main process      
+            torch.save(model.module.state_dict(), f"{os.path.join(train_config['task_name'],train_config['vae_autoencoder_ckpt_name'])}_{epoch_idx+1}.pth")
+            logger.info(f"Checkpoint Saved {train_config['vae_autoencoder_ckpt_name']}_{epoch_idx+1}.pth")
 
     print('Done Training...')
-    dist.destroy_process_group()
+    destroy_process_group()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Arguments for VAE training')
     parser.add_argument('--config', dest='config_path',
                         default='config/mnist.yaml', type=str)
-    parser.add_argument('--local_rank', type=int, default=0)  # This is for multi-GPU training
+    # parser.add_argument('--local_rank', type=int, default=0)  # This is for multi-GPU training
     args = parser.parse_args()
     
-    train(args.local_rank, args)
+    world_size = torch.cuda.device_count()
+    mp.swan(train, args=(world_size), nprocs = world_size)

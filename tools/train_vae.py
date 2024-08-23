@@ -16,10 +16,6 @@ from utils.logger import setup_logger
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-# device = 'cpu'
-
-# logger = setup_logger("VAE_logger",save_dir = 'mnist', if_train=True)
-# logger.info("Saving model in the path :{}".format(cfg.OUTPUT_DIR))
 
 # KL loss
 def kl_divergence_loss(mu, logvar):
@@ -120,9 +116,9 @@ def train(args):
                 
                 grid = make_grid(torch.cat([save_input, save_output], dim=0), nrow=sample_size)
                 img = torchvision.transforms.ToPILImage()(grid)
-                if not os.path.exists(os.path.join(train_config['task_name'],'vqvae_autoencoder_samples')):
-                    os.mkdir(os.path.join(train_config['task_name'], 'vqvae_autoencoder_samples'))
-                img.save(os.path.join(train_config['task_name'],'vqvae_autoencoder_samples',
+                if not os.path.exists(os.path.join(train_config['task_name'],'vae_autoencoder_samples')):
+                    os.mkdir(os.path.join(train_config['task_name'], 'vae_autoencoder_samples'))
+                img.save(os.path.join(train_config['task_name'],'vae_autoencoder_samples',
                                       'current_autoencoder_sample_{}.png'.format(img_save_count)))
                 img_save_count += 1
                 img.close()
@@ -151,8 +147,8 @@ def train(args):
         optimizer_g.zero_grad()
 
         logger.info(f'Finished epoch: {epoch_idx+1} | Total Loss: {np.mean(losses)} | Recon Loss : {np.mean(recon_loss):.4f} | KL Loss:  {np.mean(kl_losses)} ')      
-        torch.save(model.state_dict(), os.path.join(train_config['task_name'],
-                                                    train_config['vae_autoencoder_ckpt_name']))
+        torch.save(model.state_dict(), f"{os.path.join(train_config['task_name'],train_config['vae_autoencoder_ckpt_name'])}_{epoch_idx+1}.pth")
+        logger.info(f"Checkpoint Saved {train_config['vae_autoencoder_ckpt_name']}_{epoch_idx+1}.pth")
     
     print('Done Training...')
 
