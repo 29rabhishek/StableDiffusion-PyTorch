@@ -5,7 +5,6 @@ import random
 import torchvision
 import os
 import numpy as np
-from tqdm import tqdm
 from models.vae import VAE
 from torch.utils.data import DataLoader, DistributedSampler
 from dataset.mnist_dataset import MnistDataset
@@ -106,7 +105,7 @@ def train(rank, world_size):
 
         optimizer_g.zero_grad()
 
-        for im in tqdm(data_loader, desc=f"Epoch {epoch_idx+1}/{num_epochs}"):
+        for _, im in enumerate(data_loader):
             step_count += 1
             im = im.float().to(rank)
 
