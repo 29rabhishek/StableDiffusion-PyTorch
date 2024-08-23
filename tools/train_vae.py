@@ -6,24 +6,38 @@ import torchvision
 import os
 import numpy as np
 from tqdm import tqdm
-from models.vqvae import VQVAE
-from models.lpips import LPIPS
-from models.discriminator import Discriminator
+from models.vae import VAE
 from torch.utils.data.dataloader import DataLoader
 from dataset.mnist_dataset import MnistDataset
 from dataset.celeb_dataset import CelebDataset
 from torch.optim import Adam
 from torchvision.utils import make_grid
+from utils.logger import setup_logger
 
-#from pudb import set_trace; set_trace()
-
-os.environ['CUDA_VISIBLE_DEVICES']="4"
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # device = 'cpu'
 
+logger = setup_logger("VAE_logger",save_dire = 'mnist', if_train=True)
+# logger.info("Saving model in the path :{}".format(cfg.OUTPUT_DIR))
+
+# KL loss
+def kl_divergence_loss(mu, logvar):
+    """
+    Compute the KL divergence loss for a VAE.
+
+    Parameters:
+    mu (torch.Tensor): The mean of the latent variable distribution.
+    logvar (torch.Tensor): The logarithm of the variance of the latent variable distribution.
+
+    Returns:
+    torch.Tensor: The KL divergence loss.
+    """
+    kl_loss = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
+    return kl_loss
 
 def train(args):
+    logger = setup_logger("VAE_logger", if_train=True)
     # Read the config file #
     with open(args.config_path, 'r') as file:
         try:
@@ -46,7 +60,7 @@ def train(args):
     #############################
     
     # Create the model and dataset #
-    model = VQVAE(im_channels=dataset_config['im_channels'],
+    model = VAE(im_channels=dataset_config['im_channels'],
                   model_config=autoencoder_config)
     model.to(device)
     # Create the dataset
@@ -72,19 +86,9 @@ def train(args):
 
     # L1/L2 loss for Reconstruction
     recon_criterion = torch.nn.MSELoss()
-    # Disc Loss can even be BCEWithLogits
-    disc_criterion = torch.nn.MSELoss()
-    
-    # No need to freeze lpips as lpips.py takes care of that
-    lpips_model = LPIPS().eval().to(device)
-    discriminator = Discriminator(im_channels=dataset_config['im_channels']).to(device)
-    
-    optimizer_d = Adam(discriminator.parameters(), lr=train_config['autoencoder_lr'], betas=(0.5, 0.999))
+
     optimizer_g = Adam(model.parameters(), lr=train_config['autoencoder_lr'], betas=(0.5, 0.999))
-    
-    disc_step_start = train_config['disc_start']
-    step_count = 0
-    
+
     # This is for accumulating gradients incase the images are huge
     # And one cant afford higher batch sizes
     acc_steps = train_config['autoencoder_acc_steps']
@@ -93,15 +97,10 @@ def train(args):
     model.train()
     for epoch_idx in range(num_epochs):
         recon_losses = []
-        codebook_losses = []
-        #commitment_losses = []
-        perceptual_losses = []
-        disc_losses = []
-        gen_losses = []
+        kl_losses = []
         losses = []
         
         optimizer_g.zero_grad()
-        optimizer_d.zero_grad()
         
         for im in tqdm(data_loader):
             step_count += 1
@@ -109,7 +108,7 @@ def train(args):
             
             # Fetch autoencoders output(reconstructions)
             model_output = model(im)
-            output, z, quantize_losses = model_output
+            output, mu, logvar = model_output
             
             # Image Saving Logic
             if step_count % image_save_steps == 0 or step_count == 1:
@@ -132,78 +131,33 @@ def train(args):
             recon_loss = recon_criterion(output, im) 
             recon_losses.append(recon_loss.item())
             recon_loss = recon_loss / acc_steps
-            g_loss = (recon_loss +
-                      (train_config['codebook_weight'] * quantize_losses['codebook_loss'] / acc_steps) +
-                      (train_config['commitment_beta'] * quantize_losses['commitment_loss'] / acc_steps))
-            codebook_losses.append(train_config['codebook_weight'] * quantize_losses['codebook_loss'].item())
-            # Adversarial loss only if disc_step_start steps passed
-            if step_count > disc_step_start:
-                disc_fake_pred = discriminator(model_output[0])
-                disc_fake_loss = disc_criterion(disc_fake_pred,
-                                                torch.ones(disc_fake_pred.shape,
-                                                           device=disc_fake_pred.device))
-                gen_losses.append(train_config['disc_weight'] * disc_fake_loss.item())
-                g_loss += train_config['disc_weight'] * disc_fake_loss / acc_steps
-            lpips_loss = torch.mean(lpips_model(output, im)) / acc_steps
-            perceptual_losses.append(train_config['perceptual_weight'] * lpips_loss.item())
-            g_loss += train_config['perceptual_weight']*lpips_loss / acc_steps
+
+            #kl loss
+            kl_loss =  kl_divergence_loss(mu, logvar)
+            kl_losses.append(kl_loss.item())
+            kl_loss = kl_loss/acc_steps
+
+            g_loss = (recon_loss + kl_loss)
             losses.append(g_loss.item())
             g_loss.backward()
             #####################################
-            
-            ######### Optimize Discriminator #######
-            if step_count > disc_step_start:
-                fake = output
-                disc_fake_pred = discriminator(fake.detach())
-                disc_real_pred = discriminator(im)
-                disc_fake_loss = disc_criterion(disc_fake_pred,
-                                                torch.zeros(disc_fake_pred.shape,
-                                                            device=disc_fake_pred.device))
-                disc_real_loss = disc_criterion(disc_real_pred,
-                                                torch.ones(disc_real_pred.shape,
-                                                           device=disc_real_pred.device))
-                disc_loss = train_config['disc_weight'] * (disc_fake_loss + disc_real_loss) / 2
-                disc_losses.append(disc_loss.item())
-                disc_loss = disc_loss / acc_steps
-                disc_loss.backward()
-                if step_count % acc_steps == 0:
-                    optimizer_d.step()
-                    optimizer_d.zero_grad()
-            #####################################
+
             
             if step_count % acc_steps == 0:
                 optimizer_g.step()
                 optimizer_g.zero_grad()
-        optimizer_d.step()
-        optimizer_d.zero_grad()
         optimizer_g.step()
         optimizer_g.zero_grad()
-        if len(disc_losses) > 0:
-            print(
-                'Finished epoch: {} | Recon Loss : {:.4f} | Perceptual Loss : {:.4f} | '
-                'Codebook : {:.4f} | G Loss : {:.4f} | D Loss {:.4f}'.
-                format(epoch_idx + 1,
-                       np.mean(recon_losses),
-                       np.mean(perceptual_losses),
-                       np.mean(codebook_losses),
-                       np.mean(gen_losses),
-                       np.mean(disc_losses)))
-        else:
-            print('Finished epoch: {} | Recon Loss : {:.4f} | Perceptual Loss : {:.4f} | Codebook : {:.4f}'.
-                  format(epoch_idx + 1,
-                         np.mean(recon_losses),
-                         np.mean(perceptual_losses),
-                         np.mean(codebook_losses)))
-        
+
+        logger.info(f'Finished epoch: {epoch_idx+1} | Total Loss: {np.mean(losses)} | Recon Loss : {np.mean(recon_loss):.4f} | KL Loss:  {np.mean(kl_losses)} ')      
         torch.save(model.state_dict(), os.path.join(train_config['task_name'],
-                                                    train_config['vqvae_autoencoder_ckpt_name']))
-        torch.save(discriminator.state_dict(), os.path.join(train_config['task_name'],
-                                                            train_config['vqvae_discriminator_ckpt_name']))
+                                                    train_config['vae_autoencoder_ckpt_name']))
+    
     print('Done Training...')
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Arguments for vq vae training')
+    parser = argparse.ArgumentParser(description='Arguments for vae training')
     parser.add_argument('--config', dest='config_path',
                         default='config/mnist.yaml', type=str)
     args = parser.parse_args()
