@@ -18,7 +18,7 @@ from utils.logger import setup_logger
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # device = 'cpu'
 
-logger = setup_logger("VAE_logger",save_dir = 'mnist', if_train=True)
+# logger = setup_logger("VAE_logger",save_dir = 'mnist', if_train=True)
 # logger.info("Saving model in the path :{}".format(cfg.OUTPUT_DIR))
 
 # KL loss
@@ -37,7 +37,7 @@ def kl_divergence_loss(mu, logvar):
     return kl_loss
 
 def train(args):
-    logger = setup_logger("VAE_logger", if_train=True)
+    logger = setup_logger("VAE_logger",save_dir = 'mnist', if_train=True)
     # Read the config file #
     with open(args.config_path, 'r') as file:
         try:
