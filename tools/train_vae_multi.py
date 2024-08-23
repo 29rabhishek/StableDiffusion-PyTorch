@@ -111,7 +111,7 @@ def train(rank, world_size, args):
 
             with autocast():  # Mixed precision training
                 model_output = model(im)
-                output, mu, logvar, quantize_losses = model_output
+                output, mu, logvar = model_output
 
                 if step_count % image_save_steps == 0 or step_count == 1:
                     if rank == 0:  # Save images only on the main process
