@@ -18,7 +18,7 @@ from utils.logger import setup_logger
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # device = 'cpu'
 
-logger = setup_logger("VAE_logger",save_dire = 'mnist', if_train=True)
+logger = setup_logger("VAE_logger",save_dir = 'mnist', if_train=True)
 # logger.info("Saving model in the path :{}".format(cfg.OUTPUT_DIR))
 
 # KL loss
