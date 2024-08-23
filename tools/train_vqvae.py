@@ -15,7 +15,7 @@ from dataset.celeb_dataset import CelebDataset
 from torch.optim import Adam
 from torchvision.utils import make_grid
 
-from pudb import set_trace; set_trace()
+#from pudb import set_trace; set_trace()
 
 os.environ['CUDA_VISIBLE_DEVICES']="4"
 
