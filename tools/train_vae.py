@@ -95,6 +95,7 @@ def train(args):
     image_save_steps = train_config['autoencoder_img_save_steps']
     img_save_count = 0
     model.train()
+    step_count = 0
     for epoch_idx in range(num_epochs):
         recon_losses = []
         kl_losses = []
