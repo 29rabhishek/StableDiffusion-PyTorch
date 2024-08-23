@@ -15,7 +15,7 @@ from dataset.mnist_dataset import MnistDataset
 from models.vqvae import VQVAE
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
+os.environ["CUDA_VISIBLE_DEVICES"]="6"
 
 def infer(args):
     ######## Read the config file #######
