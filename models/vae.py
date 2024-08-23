@@ -17,7 +17,7 @@ class VAE(nn.Module):
         self.attns = model_config['attn_down']
         
         # Latent Dimension
-        self.z_channels = model_config['z_channels']
+        self.z_channels = model_config['z_channels'] #default 3 channels
         self.norm_channels = model_config['norm_channels']
         self.num_heads = model_config['num_heads']
         
@@ -97,8 +97,9 @@ class VAE(nn.Module):
         out = self.pre_quant_conv(out)
         mean, logvar = torch.chunk(out, 2, dim=1)
         std = torch.exp(0.5 * logvar)
-        sample = mean + std * torch.randn(mean.shape).to(device=x.device)
-        return sample, out
+        z = mean + std * torch.randn(mean.shape).to(device=x.device)
+        return mean, logvar, z
+    
     
     def decode(self, z):
         out = z
@@ -115,7 +116,10 @@ class VAE(nn.Module):
         return out
 
     def forward(self, x):
-        z, encoder_output = self.encode(x)
+        mu, logvar, z = self.encode(x)
         out = self.decode(z)
-        return out, encoder_output
-
+        return out, mu, logvar
+    
+    # To do Implement sample generation login
+    def sample_generate():
+        pass
