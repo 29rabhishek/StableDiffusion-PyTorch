@@ -36,7 +36,7 @@ def kl_divergence_loss(mu, logvar):
     kl_loss = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
     return kl_loss
 
-def train(rank, world_size):
+def train(rank, world_size, args):
     # Initialize process group for distributed training
     ddp_setup(rank, world_size)
 
@@ -162,4 +162,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     world_size = torch.cuda.device_count()
-    mp.spawn(train, args=(world_size), nprocs = world_size)
+    mp.spawn(train, args=(world_size, args), nprocs = world_size)
