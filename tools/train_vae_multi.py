@@ -162,4 +162,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     world_size = torch.cuda.device_count()
-    mp.swan(train, args=(world_size), nprocs = world_size)
+    mp.spawn(train, args=(world_size), nprocs = world_size)
