@@ -16,7 +16,7 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.cuda.amp import GradScaler, autocast
 from torch.distributed import init_process_group, destroy_process_group
 import torch.multiprocessing as mp
-os.environ["CUDA_VISIBLE_DEVICES"] = "2, 3, 4"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "2, 3, 4"
 
 
 
