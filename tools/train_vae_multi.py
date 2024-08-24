@@ -17,7 +17,7 @@ from torch.cuda.amp import GradScaler, autocast
 from torch.distributed import init_process_group, destroy_process_group
 import torch.multiprocessing as mp
 # os.environ["CUDA_VISIBLE_DEVICES"] = "2, 3, 4"
-# from pudb import set_trace; set_trace()
+from pudb import set_trace; set_trace()
 
 
 def ddp_setup(rank, world_size):
@@ -143,6 +143,10 @@ def train(rank, world_size, args):
             scaler.step(optimizer_g)
             scaler.update()
             optimizer_g.zero_grad()
+            print(f'Losses: {losses}')
+            print(f'Recon Losses: {recon_losses}')
+            print(f'KL Losses: {kl_losses}')
+
         print(f'GPU[{rank}] epoch: {epoch_idx+1} | Total Loss: {np.mean(losses)} | Recon Loss : {np.mean(recon_loss):.4f} | KL Loss:  {np.mean(kl_losses)}')
         if rank == 0:  # Log only on the main process      
             torch.save(model.module.state_dict(), f"{os.path.join(train_config['task_name'],train_config['vae_autoencoder_ckpt_name'])}_{epoch_idx+1}.pth")
