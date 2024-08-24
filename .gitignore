@@ -19,4 +19,4 @@ __pycache__
 # Ignore pickle files
 *.pkl
 #ignore mnist folder
-mnist/
+data/
