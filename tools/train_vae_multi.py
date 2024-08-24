@@ -17,7 +17,7 @@ from torch.cuda.amp import GradScaler, autocast
 from torch.distributed import init_process_group, destroy_process_group
 import torch.multiprocessing as mp
 # os.environ["CUDA_VISIBLE_DEVICES"] = "2, 3, 4"
-import pdb; pdb.set_trace()
+from pudb import set_trace; set_trace()
 
 
 def ddp_setup(rank, world_size):
