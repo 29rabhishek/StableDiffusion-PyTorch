@@ -17,7 +17,7 @@ from torch.cuda.amp import GradScaler, autocast
 from torch.distributed import init_process_group, destroy_process_group
 import torch.multiprocessing as mp
 # os.environ["CUDA_VISIBLE_DEVICES"] = "2, 3, 4"
-from pudb import set_trace; set_trace()
+# from pudb import set_trace; set_trace()
 
 
 def ddp_setup(rank, world_size):
@@ -110,6 +110,7 @@ def train(rank, world_size, args):
             im = im.float().to(rank)
 
             with autocast():  # Mixed precision training
+                
                 model_output = model(im)
                 output, mu, logvar = model_output
 
@@ -131,21 +132,17 @@ def train(rank, world_size, args):
 
                 recon_loss = recon_criterion(output, im)
                 recon_losses.append(recon_loss.item())
-                recon_loss = recon_loss / acc_steps
 
                 kl_loss = kl_divergence_loss(mu, logvar)
                 kl_losses.append(kl_loss.item())
-                kl_loss = kl_loss / acc_steps
 
                 g_loss = recon_loss + kl_loss
                 losses.append(g_loss.item())
 
             scaler.scale(g_loss).backward()
-
-            if step_count % acc_steps == 0:
-                scaler.step(optimizer_g)
-                scaler.update()
-                optimizer_g.zero_grad()
+            scaler.step(optimizer_g)
+            scaler.update()
+            optimizer_g.zero_grad()
         print(f'GPU[{rank}] epoch: {epoch_idx+1} | Total Loss: {np.mean(losses)} | Recon Loss : {np.mean(recon_loss):.4f} | KL Loss:  {np.mean(kl_losses)}')
         if rank == 0:  # Log only on the main process      
             torch.save(model.module.state_dict(), f"{os.path.join(train_config['task_name'],train_config['vae_autoencoder_ckpt_name'])}_{epoch_idx+1}.pth")
