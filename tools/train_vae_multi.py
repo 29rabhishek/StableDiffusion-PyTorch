@@ -148,7 +148,7 @@ def train(rank, world_size, args):
             kl_losses = kl_losses/len(data_loader)
             losses = losses/len(data_loader)
         print("-------")
-        print(f'GPU[{rank}] epoch: {epoch_idx+1} | Total Loss: {np.mean(losses)} | Recon Loss : {np.mean(recon_loss):.4f} | KL Loss:  {np.mean(kl_losses)}')
+        print(f'GPU[{rank}] epoch: {epoch_idx+1} | Total Loss: {losses} | Recon Loss :{recon_loss:.4f} | KL Loss:  {kl_losses}')
         if rank == 0:  # Log only on the main process      
             torch.save(model.module.state_dict(), f"{os.path.join(train_config['task_name'],train_config['vae_autoencoder_ckpt_name'])}_{epoch_idx+1}.pth")
             logger.info(f"Checkpoint Saved {train_config['vae_autoencoder_ckpt_name']}_{epoch_idx+1}.pth")
