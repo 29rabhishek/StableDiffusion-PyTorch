@@ -99,9 +99,9 @@ def train(rank, world_size, args):
 
     model.train()
     for epoch_idx in range(num_epochs):
-        recon_losses = []
-        kl_losses = []
-        losses = []
+        recon_losses = 0
+        kl_losses = 0
+        losses = 0
 
         optimizer_g.zero_grad()
 
@@ -131,21 +131,22 @@ def train(rank, world_size, args):
                         img.close()
 
                 recon_loss = recon_criterion(output, im)
-                recon_losses.append(recon_loss.item())
+                recon_losses+=recon_loss
 
                 kl_loss = kl_divergence_loss(mu, logvar)
-                kl_losses.append(kl_loss.item())
+                kl_losses+=kl_loss
 
                 g_loss = recon_loss + kl_loss
-                losses.append(g_loss.item())
+                losses+=g_loss
 
             scaler.scale(g_loss).backward()
             scaler.step(optimizer_g)
             scaler.update()
             optimizer_g.zero_grad()
             # print(f'Losses: {losses}')
-            # print(f'Recon Losses: {recon_losses}')
-            # print(f'KL Losses: {kl_losses}')
+            recon_losses = recon_losses/len(data_loader)
+            kl_losses = kl_losses/len(data_loader)
+            losses = losses/len(data_loader)
         print("-------")
         print(f'GPU[{rank}] epoch: {epoch_idx+1} | Total Loss: {np.mean(losses)} | Recon Loss : {np.mean(recon_loss):.4f} | KL Loss:  {np.mean(kl_losses)}')
         if rank == 0:  # Log only on the main process      
