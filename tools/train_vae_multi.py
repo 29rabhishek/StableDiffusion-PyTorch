@@ -9,6 +9,8 @@ from models.vae import VAE
 from torch.utils.data import DataLoader, DistributedSampler
 from dataset.mnist_dataset import MnistDataset
 from dataset.celeb_dataset import CelebDataset
+from dataset.imagenet_dataset import ImageNetDataset
+
 from torch.optim import Adam
 from torchvision.utils import make_grid
 from utils.logger import setup_logger
@@ -70,6 +72,7 @@ def train(rank, world_size, args):
     im_dataset_cls = {
         'mnist': MnistDataset,
         'celebhq': CelebDataset,
+        'imagenet': ImageNetDataset
     }.get(dataset_config['name'])
 
     im_dataset = im_dataset_cls(split='train',
@@ -159,7 +162,7 @@ def train(rank, world_size, args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Arguments for VAE training')
     parser.add_argument('--config', dest='config_path',
-                        default='config/mnist.yaml', type=str)
+                        default='config/imagenet.yaml', type=str)
     # parser.add_argument('--local_rank', type=int, default=0)  # This is for multi-GPU training
     args = parser.parse_args()
     
