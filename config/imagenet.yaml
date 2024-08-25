@@ -1,7 +1,7 @@
 dataset_params:
   im_path: 'data/imagenet/images'
-  im_channels : 1
-  im_size : 28
+  im_channels : 3
+  im_size : 128
   name: 'imagenet'
 
 diffusion_params:
