@@ -1,5 +1,5 @@
 dataset_params:
-  im_path: 'data/imagenet/images'
+  im_path: 'data/imagenet'
   im_channels : 3
   im_size : 128
   name: 'imagenet'
@@ -39,7 +39,7 @@ train_params:
   seed : 1111
   task_name: 'imagenet'
   ldm_batch_size: 64
-  autoencoder_batch_size: 8
+  autoencoder_batch_size: 64
   disc_start: 1000
   disc_weight: 0.5
   codebook_weight: 1
@@ -47,13 +47,13 @@ train_params:
   perceptual_weight: 1
   kl_weight: 0.000005
   ldm_epochs : 100
-  autoencoder_epochs : 10
+  autoencoder_epochs : 100
   num_samples : 25
   num_grid_rows : 5
   ldm_lr: 0.00001
   autoencoder_lr: 0.0001
   autoencoder_acc_steps : 1
-  autoencoder_img_save_steps : 8
+  autoencoder_img_save_steps : 50
   save_latents : False
   vae_latent_dir_name : 'vae_latents'
   vqvae_latent_dir_name : 'vqvae_latents'
