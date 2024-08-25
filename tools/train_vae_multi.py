@@ -56,8 +56,8 @@ def train(rank, world_size, args):
     autoencoder_config = config['autoencoder_params']
     train_config = config['train_params']
 
-    if rank == 0: 
-        logger = setup_logger("VAE_logger", save_dir=train_config['task_name'] , if_train=True)
+    
+    logger = setup_logger(f"vae_{rank}_logger", save_dir=train_config['task_name'] , if_train=True, file_name=f"rank_{rank}")
 
     seed = train_config['seed']
     torch.manual_seed(seed)
