@@ -5,157 +5,129 @@ import random
 import torchvision
 import os
 import numpy as np
-from tqdm import tqdm
 from models.vae import VAE
-from torch.utils.data.dataloader import DataLoader
+from torch.utils.data import DataLoader
 from dataset.mnist_dataset import MnistDataset
 from dataset.celeb_dataset import CelebDataset
+from dataset.imagenet_dataset import ImageNetDataset
+
 from torch.optim import Adam
 from torchvision.utils import make_grid
 from utils.logger import setup_logger
+from torch.cuda.amp import GradScaler, autocast
 
-
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-# KL loss
 def kl_divergence_loss(mu, logvar):
-    """
-    Compute the KL divergence loss for a VAE.
-
-    Parameters:
-    mu (torch.Tensor): The mean of the latent variable distribution.
-    logvar (torch.Tensor): The logarithm of the variance of the latent variable distribution.
-
-    Returns:
-    torch.Tensor: The KL divergence loss.
-    """
     kl_loss = -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
     return kl_loss
 
 def train(args):
-    logger = setup_logger("VAE_logger",save_dir = 'mnist', if_train=True)
-    # Read the config file #
     with open(args.config_path, 'r') as file:
         try:
             config = yaml.safe_load(file)
         except yaml.YAMLError as exc:
             print(exc)
-    print(config)
     
     dataset_config = config['dataset_params']
     autoencoder_config = config['autoencoder_params']
     train_config = config['train_params']
-    
-    # Set the desired seed value #
+
+    logger = setup_logger("VAE_logger", save_dir=train_config['task_name'], if_train=True)
+
     seed = train_config['seed']
     torch.manual_seed(seed)
     np.random.seed(seed)
     random.seed(seed)
-    if device == 'cuda':
+    if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
-    #############################
-    
-    # Create the model and dataset #
-    model = VAE(im_channels=dataset_config['im_channels'],
-                  model_config=autoencoder_config)
-    model.to(device)
-    # Create the dataset
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    model = VAE(im_channels=dataset_config['im_channels'], model_config=autoencoder_config).to(device)
+
     im_dataset_cls = {
         'mnist': MnistDataset,
         'celebhq': CelebDataset,
+        'imagenet': ImageNetDataset
     }.get(dataset_config['name'])
-    
+
     im_dataset = im_dataset_cls(split='train',
                                 im_path=dataset_config['im_path'],
                                 im_size=dataset_config['im_size'],
                                 im_channels=dataset_config['im_channels'])
-    
+
     data_loader = DataLoader(im_dataset,
                              batch_size=train_config['autoencoder_batch_size'],
                              shuffle=True)
-    
-    # Create output directories
+
     if not os.path.exists(train_config['task_name']):
         os.mkdir(train_config['task_name'])
-        
-    num_epochs = train_config['autoencoder_epochs']
 
-    # L1/L2 loss for Reconstruction
+    num_epochs = train_config['autoencoder_epochs']
     recon_criterion = torch.nn.MSELoss()
 
     optimizer_g = Adam(model.parameters(), lr=train_config['autoencoder_lr'], betas=(0.5, 0.999))
 
-    # This is for accumulating gradients incase the images are huge
-    # And one cant afford higher batch sizes
-    acc_steps = train_config['autoencoder_acc_steps']
+    scaler = GradScaler()
     image_save_steps = train_config['autoencoder_img_save_steps']
     img_save_count = 0
+
     model.train()
-    step_count = 0
     for epoch_idx in range(num_epochs):
-        recon_losses = []
-        kl_losses = []
-        losses = []
-        
+        recon_losses = 0
+        kl_losses = 0
+        losses = 0
+
         optimizer_g.zero_grad()
-        
-        for im in tqdm(data_loader):
-            step_count += 1
+
+        for _, im in enumerate(data_loader):
             im = im.float().to(device)
-            
-            # Fetch autoencoders output(reconstructions)
-            model_output = model(im)
-            output, mu, logvar = model_output
-            
-            # Image Saving Logic
-            if step_count % image_save_steps == 0 or step_count == 1:
-                sample_size = min(8, im.shape[0])
-                save_output = torch.clamp(output[:sample_size], -1., 1.).detach().cpu()
-                save_output = ((save_output + 1) / 2)
-                save_input = ((im[:sample_size] + 1) / 2).detach().cpu()
-                
-                grid = make_grid(torch.cat([save_input, save_output], dim=0), nrow=sample_size)
-                img = torchvision.transforms.ToPILImage()(grid)
-                if not os.path.exists(os.path.join(train_config['task_name'],'vae_autoencoder_samples')):
-                    os.mkdir(os.path.join(train_config['task_name'], 'vae_autoencoder_samples'))
-                img.save(os.path.join(train_config['task_name'],'vae_autoencoder_samples',
-                                      'current_autoencoder_sample_{}.png'.format(img_save_count)))
-                img_save_count += 1
-                img.close()
-            
-            ######### Optimize Generator ##########
-            # L2 Loss
-            recon_loss = recon_criterion(output, im) 
-            recon_losses.append(recon_loss.item())
-            recon_loss = recon_loss / acc_steps
 
-            #kl loss
-            kl_loss =  kl_divergence_loss(mu, logvar)
-            kl_losses.append(kl_loss.item())
-            kl_loss = kl_loss/acc_steps
+            with autocast():  # Mixed precision training
+                model_output = model(im)
+                output, mu, logvar = model_output
 
-            g_loss = (recon_loss + kl_loss)
-            losses.append(g_loss.item())
-            g_loss.backward()
-            #####################################
+                if img_save_count % image_save_steps == 0 or img_save_count == 0:
+                    sample_size = min(8, im.shape[0])
+                    save_output = torch.clamp(output[:sample_size], -1., 1.).detach().cpu()
+                    save_output = ((save_output + 1) / 2)
+                    save_input = ((im[:sample_size] + 1) / 2).detach().cpu()
 
-            
-            if step_count % acc_steps == 0:
-                optimizer_g.step()
-                optimizer_g.zero_grad()
-        optimizer_g.step()
-        optimizer_g.zero_grad()
+                    grid = make_grid(torch.cat([save_input, save_output], dim=0), nrow=sample_size)
+                    img = torchvision.transforms.ToPILImage()(grid)
+                    img_save_path = os.path.join(train_config['task_name'], 'vqvae_autoencoder_samples')
+                    os.makedirs(img_save_path, exist_ok=True)
+                    img.save(os.path.join(img_save_path, f'current_autoencoder_sample_{img_save_count}.png'))
+                    img_save_count += 1
+                    img.close()
 
-        logger.info(f'Finished epoch: {epoch_idx+1} | Total Loss: {np.mean(losses)} | Recon Loss : {np.mean(recon_loss):.4f} | KL Loss:  {np.mean(kl_losses)} ')      
-        torch.save(model.state_dict(), f"{os.path.join(train_config['task_name'],train_config['vae_autoencoder_ckpt_name'])}_{epoch_idx+1}.pth")
-        logger.info(f"Checkpoint Saved {train_config['vae_autoencoder_ckpt_name']}_{epoch_idx+1}.pth")
-    
+                recon_loss = recon_criterion(output, im)
+                recon_losses += recon_loss
+
+                kl_loss = kl_divergence_loss(mu, logvar)
+                kl_losses += kl_loss
+
+                g_loss = recon_loss + kl_loss
+                losses += g_loss
+
+            scaler.scale(g_loss).backward()
+            scaler.step(optimizer_g)
+            scaler.update()
+            optimizer_g.zero_grad()
+
+        recon_losses = recon_losses / len(data_loader)
+        kl_losses = kl_losses / len(data_loader)
+        losses = losses / len(data_loader)
+
+        print(f'Epoch: {epoch_idx + 1} | Total Loss: {losses} | Recon Loss: {recon_loss:.4f} | KL Loss: {kl_losses}')
+
+        torch.save(model.state_dict(), f"{os.path.join(train_config['task_name'], train_config['vae_autoencoder_ckpt_name'])}_{epoch_idx + 1}.pth")
+        logger.info(f"Checkpoint Saved {train_config['vae_autoencoder_ckpt_name']}_{epoch_idx + 1}.pth")
+
     print('Done Training...')
 
-
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Arguments for vae training')
-    parser.add_argument('--config', dest='config_path',
-                        default='config/mnist.yaml', type=str)
+    parser = argparse.ArgumentParser(description='Arguments for VAE training')
+    parser.add_argument('--config', dest='config_path', default='config/imagenet.yaml', type=str)
     args = parser.parse_args()
+
     train(args)
