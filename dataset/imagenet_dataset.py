@@ -88,7 +88,7 @@ class ImageNetDataset(Dataset):
         else:
             im = Image.open(self.images[index])
             im_tensor = torchvision.transforms.Compose([
-                torchvision.transforms.Resize(self.im_size),
+                torchvision.transforms.Resize((self.im_size, self.im_size)),
                 torchvision.transforms.ToTensor()
             ])(im)
             # im_tensor = torchvision.transforms.ToTensor()(im)
