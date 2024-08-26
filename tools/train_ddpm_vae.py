@@ -99,7 +99,7 @@ def train(args):
             im = im.float()
             if not im_dataset.use_latents:
                 with torch.no_grad():
-                    im, _ = vae.encode(im)
+                    _, _, z = vae.encode(im)
             
             # Sample random noise
             noise = torch.randn_like(im).to(accelerator.device)
