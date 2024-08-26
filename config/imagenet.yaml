@@ -17,7 +17,7 @@ ldm_params:
   attn_down : [True, True, True]
   time_emb_dim: 256
   norm_channels : 32
-  num_heads : 16
+  num_heads : 8
   conv_out_channels : 128
   num_down_layers: 2
   num_mid_layers: 2
@@ -39,7 +39,7 @@ autoencoder_params:
 train_params:
   seed : 1111
   task_name: 'imagenet'
-  ldm_batch_size: 64
+  ldm_batch_size: 16
   autoencoder_batch_size: 16
   disc_start: 1000
   disc_weight: 0.5
