@@ -113,6 +113,7 @@ class DownBlock(nn.Module):
         for i in range(self.num_layers):
             # Resnet block of Unet
             resnet_input = out
+
             out = self.resnet_conv_first[i](out)
             if self.t_emb_dim is not None:
                 out = out + self.t_emb_layers[i](t_emb)[:, :, None, None]
