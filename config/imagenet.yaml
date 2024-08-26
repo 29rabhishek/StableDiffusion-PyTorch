@@ -60,7 +60,7 @@ train_params:
   vqvae_latent_dir_name : 'vqvae_latents'
   ldm_ckpt_name: 'ddpm_uncond_ckpt'
   vqvae_autoencoder_ckpt_name: 'vqvae_autoencoder_ckpt.pth'
-  vae_autoencoder_ckpt_name: 'vae_autoencoder_ckpt',
+  vae_autoencoder_ckpt_name: 'vae_autoencoder_ckpt'
   vae_ckpt_path : 'imagenet/vae_autoencoder_ckpt_98.pth'
   vqvae_discriminator_ckpt_name: 'vqvae_discriminator_ckpt.pth'
   vae_discriminator_ckpt_name: 'vae_discriminator_ckpt.pth'
