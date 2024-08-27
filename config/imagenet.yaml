@@ -39,7 +39,7 @@ autoencoder_params:
 train_params:
   seed : 1111
   task_name: 'imagenet'
-  ldm_batch_size: 16
+  ldm_batch_size: 8
   autoencoder_batch_size: 16
   disc_start: 1000
   disc_weight: 0.5
