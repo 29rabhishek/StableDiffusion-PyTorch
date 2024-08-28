@@ -58,7 +58,7 @@ def train(rank, world_size, args):
         'celebhq': CelebDataset,
         'imagenet': ImageNetDataset
     }.get(dataset_config['name'])
-
+    device_with_rank = f"cuda:{rank}"
     im_dataset = im_dataset_cls(split='train',
                                 im_path=dataset_config['im_path'],
                                 im_size=dataset_config['im_size'],
@@ -86,13 +86,13 @@ def train(rank, world_size, args):
     if not im_dataset.use_latents:
         print('Loading vae model as latents not present')
         vae = VAE(im_channels=dataset_config['im_channels'],
-                    model_config=autoencoder_model_config).to(rank)
+                    model_config=autoencoder_model_config).to(device_with_rank)
         vae.eval()
         # Load vae if found
         if os.path.exists(train_config["vae_ckpt_path"]):
             print('Loaded vae checkpoint')
             vae.load_state_dict(torch.load(train_config["vae_ckpt_path"],
-                                           map_location=rank))
+                                           map_location=device_with_rank))
     # Specify training parameters
     num_epochs = train_config['ldm_epochs']
     optimizer = Adam(model.parameters(), lr=train_config['ldm_lr'])
@@ -118,10 +118,10 @@ def train(rank, world_size, args):
                         _, _, z = vae.encode(im)
             
                 # Sample random noise
-                noise = torch.randn_like(im).to(rank)
+                noise = torch.randn_like(im).to(device_with_rank)
                 
                 # Sample timestep
-                t = torch.randint(0, diffusion_config['num_timesteps'], (im.shape[0],)).to(rank)
+                t = torch.randint(0, diffusion_config['num_timesteps'], (im.shape[0],)).to(device_with_rank)
                 
                 # Add noise to images according to timestep
                 noisy_im = scheduler.add_noise(im, noise, t)
