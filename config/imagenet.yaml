@@ -58,7 +58,7 @@ train_params:
   save_latents : False
   vae_latent_dir_name : 'vae_latents'
   vqvae_latent_dir_name : 'vqvae_latents'
-  ldm_dir: imagenet/ldm
+  ldm_dir: 'imagenet/ldm'
   ldm_ckpt_name: 'ddpm_uncond_ckpt'
   vqvae_autoencoder_ckpt_name: 'vqvae_autoencoder_ckpt.pth'
   vae_autoencoder_ckpt_name: 'vae_autoencoder_ckpt'
