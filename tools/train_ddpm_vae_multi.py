@@ -151,4 +151,5 @@ if __name__ == '__main__':
     parser.add_argument('--config', dest='config_path',
                         default='config/imagenet.yaml', type=str)
     args = parser.parse_args()
-    train(args)
+    world_size = torch.cuda.device_count()
+    mp.spawn(train, args=(world_size, args), nprocs=world_size)
