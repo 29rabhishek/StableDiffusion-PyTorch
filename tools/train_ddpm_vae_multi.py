@@ -86,13 +86,12 @@ def train(rank, world_size, args):
     if not im_dataset.use_latents:
         print('Loading vae model as latents not present')
         vae = VAE(im_channels=dataset_config['im_channels'],
-                    model_config=autoencoder_model_config).to(device_with_rank)
+                    model_config=autoencoder_model_config)
         vae.eval()
         # Load vae if found
         if os.path.exists(train_config["vae_ckpt_path"]):
             print('Loaded vae checkpoint')
-            vae.load_state_dict(torch.load(train_config["vae_ckpt_path"],
-                                           map_location=device_with_rank))
+            vae.load_state_dict(torch.load(train_config["vae_ckpt_path"], map_location=device_with_rank))
     # Specify training parameters
     num_epochs = train_config['ldm_epochs']
     optimizer = Adam(model.parameters(), lr=train_config['ldm_lr'])
