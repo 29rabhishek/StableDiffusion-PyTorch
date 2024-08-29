@@ -117,13 +117,13 @@ def train(rank, world_size, args):
                         _, _, z = vae.encode(im)
             
                 # Sample random noise
-                noise = torch.randn_like(im).to(device_with_rank)
+                noise = torch.randn_like(z).to(device_with_rank)
                 
                 # Sample timestep
-                t = torch.randint(0, diffusion_config['num_timesteps'], (im.shape[0],)).to(device_with_rank)
+                t = torch.randint(0, diffusion_config['num_timesteps'], (z.shape[0],)).to(device_with_rank)
                 
                 # Add noise to images according to timestep
-                noisy_im = scheduler.add_noise(im, noise, t)
+                noisy_im = scheduler.add_noise(z, noise, t)
                 noise_pred = model(noisy_im, t)
                 
                 loss = criterion(noise_pred, noise)
