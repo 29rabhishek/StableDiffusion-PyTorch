@@ -80,13 +80,13 @@ def train(rank, world_size, args):
     
     # Instantiate the model
     model = Unet(im_channels=autoencoder_model_config['z_channels'],
-                 model_config=diffusion_model_config)
+                 model_config=diffusion_model_config).to(rank)
     
     # Load VAE ONLY if latents are not to be used or are missing
     if not im_dataset.use_latents:
         print('Loading vae model as latents not present')
         vae = VAE(im_channels=dataset_config['im_channels'],
-                    model_config=autoencoder_model_config)
+                    model_config=autoencoder_model_config).to(rank)
         vae.eval()
         # Load vae if found
         if os.path.exists(train_config["vae_ckpt_path"]):
@@ -111,7 +111,7 @@ def train(rank, world_size, args):
         optimizer.zero_grad()
         for im in data_loader:
             with autocast():
-            # im = im.float()
+                im = im.half()
                 if not im_dataset.use_latents:
                     with torch.no_grad():
                         _, _, z = vae.encode(im)
