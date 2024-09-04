@@ -86,7 +86,7 @@ def train(rank, world_size, args):
     if not im_dataset.use_latents:
         print('Loading vae model as latents not present')
         vae = VAE(im_channels=dataset_config['im_channels'],
-                    model_config=autoencoder_model_config)
+                    model_config=autoencoder_model_config).to(device_with_rank)
         vae.eval()
         # Load vae if found
         if os.path.exists(train_config["vae_ckpt_path"]):
