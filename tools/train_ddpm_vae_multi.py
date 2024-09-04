@@ -111,10 +111,14 @@ def train(rank, world_size, args):
         optimizer.zero_grad()
         for im in data_loader:
             with autocast():
+                print(f"Tensor Device: {im.get_device()}")
             # im = im.float()
+                print(f"Model Device: {next(model.parameters()).device}")
+
                 if not im_dataset.use_latents:
                     with torch.no_grad():
                         _, _, z = vae.encode(im)
+                        print()
             
                 # Sample random noise
                 noise = torch.randn_like(z).to(device_with_rank)
