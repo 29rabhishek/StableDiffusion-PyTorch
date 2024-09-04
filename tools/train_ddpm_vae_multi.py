@@ -118,7 +118,6 @@ def train(rank, world_size, args):
                 if not im_dataset.use_latents:
                     with torch.no_grad():
                         _, _, z = vae.encode(im)
-                        print()
             
                 # Sample random noise
                 noise = torch.randn_like(z).to(device_with_rank)
