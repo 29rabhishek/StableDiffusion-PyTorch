@@ -90,7 +90,7 @@ def train(args):
         losses = []
         for im in data_loader:
             optimizer.zero_grad()
-            im = im.float()
+            im = im.to('cuda').float()
             if not im_dataset.use_latents:
                 with torch.no_grad():
                     _, _, z = vae.encode(im)
