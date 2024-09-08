@@ -121,5 +121,5 @@ class VAE(nn.Module):
         return out, mu, logvar
     
     # To do Implement sample generation login
-    def sample_generate():
-        pass
+    # def sample_generate():
+    #     pass
