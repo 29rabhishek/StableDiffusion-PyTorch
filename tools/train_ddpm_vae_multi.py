@@ -80,7 +80,7 @@ def train(rank, world_size, args):
     
     # Instantiate the model
     model = Unet(im_channels=autoencoder_model_config['z_channels'],
-                 model_config=diffusion_model_config)
+                 model_config=diffusion_model_config).to(rank)
     
     # Load VAE ONLY if latents are not to be used or are missing
     if not im_dataset.use_latents:
@@ -112,16 +112,20 @@ def train(rank, world_size, args):
         for im in data_loader:
             with autocast():
             # im = im.float()
+                print(f"vae is CUDA: {next(model.parameters()).is_cuda}")
                 if not im_dataset.use_latents:
                     with torch.no_grad():
                         _, _, z = vae.encode(im)
+                        z = z.to(rank)
             
                 # Sample random noise
-                noise = torch.randn_like(z).to(device_with_rank)
+                noise = torch.randn_like(z).to(rank)
                 
                 # Sample timestep
-                t = torch.randint(0, diffusion_config['num_timesteps'], (z.shape[0],)).to(device_with_rank)
+                t = torch.randint(0, diffusion_config['num_timesteps'], (z.shape[0],)).to(rank)
                 
+                print(f"z device {z.device}")
+                print(f"t device {t.device}")
                 # Add noise to images according to timestep
                 noisy_im = scheduler.add_noise(z, noise, t)
                 noise_pred = model(noisy_im, t) 
