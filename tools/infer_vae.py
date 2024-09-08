@@ -12,7 +12,7 @@ from tqdm import tqdm
 
 from dataset.celeb_dataset import CelebDataset
 from dataset.mnist_dataset import MnistDataset
-from models.vqvae import VQVAE
+from models.vae import VAE
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 os.environ["CUDA_VISIBLE_DEVICES"]="6"
@@ -54,32 +54,21 @@ def infer(args):
     ims = torch.cat([im_dataset[idx][None, :] for idx in idxs]).float()
     ims = ims.to(device)
     
-    model = VQVAE(im_channels=dataset_config['im_channels'],
+    model = VAE(im_channels=dataset_config['im_channels'],
                   model_config=autoencoder_config).to(device)
-    model.load_state_dict(torch.load(os.path.join(train_config['task_name'],
-                                                    train_config['vqvae_autoencoder_ckpt_name']),
-                                     map_location=device))
+    model.load_state_dict(torch.load(train_config['vae_ckpt_path'], map_location=device))
     model.eval()
     
     with torch.no_grad():
-        
-        encoded_output, _ = model.encode(ims)
-        decoded_output = model.decode(encoded_output)
-        encoded_output = torch.clamp(encoded_output, -1., 1.)
-        encoded_output = (encoded_output + 1) / 2
+        # encoded_output, _ = model.encode(ims)
+        z = torch.randn()
+        decoded_output = model.decode(z)
         decoded_output = torch.clamp(decoded_output, -1., 1.)
         decoded_output = (decoded_output + 1) / 2
-        ims = (ims + 1) / 2
-
-        encoder_grid = make_grid(encoded_output.cpu(), nrow=ngrid)
         decoder_grid = make_grid(decoded_output.cpu(), nrow=ngrid)
-        input_grid = make_grid(ims.cpu(), nrow=ngrid)
-        encoder_grid = torchvision.transforms.ToPILImage()(encoder_grid)
         decoder_grid = torchvision.transforms.ToPILImage()(decoder_grid)
-        input_grid = torchvision.transforms.ToPILImage()(input_grid)
-        
-        input_grid.save(os.path.join(train_config['task_name'], 'input_samples.png'))
-        encoder_grid.save(os.path.join(train_config['task_name'], 'encoded_samples.png'))
+
+    
         decoder_grid.save(os.path.join(train_config['task_name'], 'reconstructed_samples.png'))
         
         if train_config['save_latents']:

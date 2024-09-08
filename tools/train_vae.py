@@ -31,7 +31,7 @@ def train(args):
     autoencoder_config = config['autoencoder_params']
     train_config = config['train_params']
 
-    logger = setup_logger("VAE_logger", save_dir=train_config['task_name'], if_train=True)
+    logger = setup_logger("VAE_logger", file_name='vae_logger_6th_aug', save_dir=train_config['task_name'], if_train=True)
 
     seed = train_config['seed']
     torch.manual_seed(seed)
@@ -67,7 +67,7 @@ def train(args):
 
     optimizer_g = Adam(model.parameters(), lr=train_config['autoencoder_lr'], betas=(0.5, 0.999))
 
-    scaler = GradScaler()
+    scaler = torch.cuda.amp.GradScaler()
     image_save_steps = train_config['autoencoder_img_save_steps']
     img_save_count = 0
 
@@ -77,46 +77,48 @@ def train(args):
         kl_losses = 0
         losses = 0
 
-        optimizer_g.zero_grad()
-
         for _, im in enumerate(data_loader):
             im = im.float().to(device)
 
-            with autocast():  # Mixed precision training
-                model_output = model(im)
-                output, mu, logvar = model_output
+            # with torch.cuda.amp.autocast():  # Mixed precision training
+            model_output = model(im)
+            output, mu, logvar = model_output
 
-                if img_save_count % image_save_steps == 0 or img_save_count == 0:
-                    sample_size = min(8, im.shape[0])
-                    save_output = torch.clamp(output[:sample_size], -1., 1.).detach().cpu()
-                    save_output = ((save_output + 1) / 2)
-                    save_input = ((im[:sample_size] + 1) / 2).detach().cpu()
+            recon_loss = recon_criterion(output, im)
+            recon_losses += recon_loss
 
-                    grid = make_grid(torch.cat([save_input, save_output], dim=0), nrow=sample_size)
-                    img = torchvision.transforms.ToPILImage()(grid)
-                    img_save_path = os.path.join(train_config['task_name'], 'vqvae_autoencoder_samples')
-                    os.makedirs(img_save_path, exist_ok=True)
-                    img.save(os.path.join(img_save_path, f'current_autoencoder_sample_{img_save_count}.png'))
-                    img_save_count += 1
-                    img.close()
+            kl_loss = kl_divergence_loss(mu, logvar)
+            kl_losses += kl_loss
 
-                recon_loss = recon_criterion(output, im)
-                recon_losses += recon_loss
+            g_loss = recon_loss + kl_loss
+            losses += g_loss
 
-                kl_loss = kl_divergence_loss(mu, logvar)
-                kl_losses += kl_loss
-
-                g_loss = recon_loss + kl_loss
-                losses += g_loss
-
-            scaler.scale(g_loss).backward()
-            scaler.step(optimizer_g)
-            scaler.update()
             optimizer_g.zero_grad()
+            g_loss.backward()
+            optimizer_g.step()
+
+            # scaler.scale(g_loss).backward()
+            # scaler.step(optimizer_g)
+            # scaler.update()
+            # optimizer_g.zero_grad()
 
         recon_losses = recon_losses / len(data_loader)
         kl_losses = kl_losses / len(data_loader)
         losses = losses / len(data_loader)
+        
+        if img_save_count % image_save_steps == 0 or img_save_count == 0:
+            sample_size = min(8, im.shape[0])
+            save_output = torch.clamp(output[:sample_size], -1., 1.).detach().cpu()
+            save_output = ((save_output + 1) / 2)
+            save_input = ((im[:sample_size] + 1) / 2).detach().cpu()
+
+            grid = make_grid(torch.cat([save_input, save_output], dim=0), nrow=sample_size)
+            img = torchvision.transforms.ToPILImage()(grid)
+            img_save_path = os.path.join(train_config['task_name'], 'vqvae_autoencoder_samples')
+            os.makedirs(img_save_path, exist_ok=True)
+            img.save(os.path.join(img_save_path, f'current_autoencoder_sample_{img_save_count}.png'))
+            img_save_count += 1
+            img.close()
 
         print(f'Epoch: {epoch_idx + 1} | Total Loss: {losses} | Recon Loss: {recon_loss:.4f} | KL Loss: {kl_losses}')
 

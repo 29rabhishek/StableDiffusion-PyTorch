@@ -86,7 +86,7 @@ def train(rank, world_size, args):
     if not im_dataset.use_latents:
         print('Loading vae model as latents not present')
         vae = VAE(im_channels=dataset_config['im_channels'],
-                    model_config=autoencoder_model_config).to(device_with_rank)
+                    model_config=autoencoder_model_config)
         vae.eval()
         # Load vae if found
         if os.path.exists(train_config["vae_ckpt_path"]):
@@ -111,10 +111,7 @@ def train(rank, world_size, args):
         optimizer.zero_grad()
         for im in data_loader:
             with autocast():
-                print(f"Tensor Device: {im.get_device()}")
             # im = im.float()
-                print(f"Model Device: {next(model.parameters()).device}")
-                im = im.half()
                 if not im_dataset.use_latents:
                     with torch.no_grad():
                         _, _, z = vae.encode(im)
@@ -127,7 +124,7 @@ def train(rank, world_size, args):
                 
                 # Add noise to images according to timestep
                 noisy_im = scheduler.add_noise(z, noise, t)
-                noise_pred = model(noisy_im, t)
+                noise_pred = model(noisy_im, t) 
                 
                 loss = criterion(noise_pred, noise)
                 losses.append(loss.item())

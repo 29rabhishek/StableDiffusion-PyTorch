@@ -59,7 +59,7 @@ def train(args):
     
     # Instantiate the model
     model = Unet(im_channels=autoencoder_model_config['z_channels'],
-                 model_config=diffusion_model_config)
+                 model_config=diffusion_model_config).to('cuda')
     
     # Load VAE ONLY if latents are not to be used or are missing
     if not im_dataset.use_latents:
@@ -110,7 +110,7 @@ def train(args):
 
             loss.backward()
             optimizer.step()
-
+        print(f" Epoch: {epoch_idx+1}, loss: {loss}")
 
     #     if epoch_idx % diffusion_config["ckpt_save_epoch"] == 0:
     #         #saving checkpoint
