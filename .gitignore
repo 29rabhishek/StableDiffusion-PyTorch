@@ -20,5 +20,5 @@ __pycache__
 *.pkl
 #ignore data folder
 data/
-mnist/
+/mnist
 imagenet/

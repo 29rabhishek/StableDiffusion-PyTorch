@@ -105,14 +105,13 @@ def train(rank, world_size, args):
         for param in vae.parameters():
             param.requires_grad = False
 
-
+    print(f"len dataloader {len(data_loader)}")
     for epoch_idx in range(num_epochs):
         losses = []
         optimizer.zero_grad()
         for im in data_loader:
             with autocast():
             # im = im.float()
-                print(f"vae is CUDA: {next(model.parameters()).is_cuda}")
                 if not im_dataset.use_latents:
                     with torch.no_grad():
                         _, _, z = vae.encode(im)
@@ -124,8 +123,6 @@ def train(rank, world_size, args):
                 # Sample timestep
                 t = torch.randint(0, diffusion_config['num_timesteps'], (z.shape[0],)).to(rank)
                 
-                print(f"z device {z.device}")
-                print(f"t device {t.device}")
                 # Add noise to images according to timestep
                 noisy_im = scheduler.add_noise(z, noise, t)
                 noise_pred = model(noisy_im, t) 
@@ -137,8 +134,7 @@ def train(rank, world_size, args):
                 scaler.step(optimizer)
                 scaler.update()
                 optimizer.zero_grad()
-
-        logger.info(f'GPU[{rank}] epoch: {epoch_idx+1} | Loss: {losses:.4f}')
+        logger.info(f'GPU[{rank}] epoch: {epoch_idx+1} | Loss: {losses[-1]:.4f}')
         if rank == 0:  # Log only on the main process      
             torch.save(model.module.state_dict(), f"{os.path.join(train_config['ldm_dir'],train_config['vae_autoencoder_ckpt_name'])}_{epoch_idx+1}.pth")
             logger.info(f"Checkpoint Saved {train_config['vae_autoencoder_ckpt_name']}_{epoch_idx+1}.pth")
