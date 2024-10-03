@@ -87,7 +87,7 @@ def infer(args):
     vae = VAE(im_channels=dataset_config['im_channels'],
                 model_config=autoencoder_model_config).to(device)
     vae.eval()
-    print(f'Loaded vae checkpoint path: {train_config['vae_ckpt_path']}')
+    print(f'Loaded vae checkpoint path: {train_config["vae_ckpt_path"]}')
     vae.load_state_dict(torch.load(train_config['vae_ckpt_path'], map_location=device), strict=True)
 
     with torch.no_grad():
