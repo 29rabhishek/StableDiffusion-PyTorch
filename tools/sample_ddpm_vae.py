@@ -79,7 +79,7 @@ def infer(args):
     model.eval()
 
     unet_model_path = f"{os.path.join(train_config['ldm_dir'],train_config['vae_autoencoder_ckpt_name'])}_90.pth"
-    model.load_state_dict(torch.load(unet_model_path), map_location=device)
+    model.load_state_dict(torch.load(unet_model_path, map_location=device))
     print(f'unet checkpoint is loaded {unet_model_path}')
     
     
