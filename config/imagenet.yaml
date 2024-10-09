@@ -40,7 +40,7 @@ train_params:
   seed : 1111
   task_name: 'imagenet_2'
   ldm_batch_size: 64
-  autoencoder_batch_size: 16
+  autoencoder_batch_size: 64
   disc_start: 1000
   disc_weight: 0.5
   codebook_weight: 1
