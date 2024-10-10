@@ -109,7 +109,7 @@ def train(args):
             losses.append(loss)
             loss.backward()
             optimizer.step()
-            mean_loss = torch.mean(losses).item()
+            mean_loss = torch.tensor(losses).mean().item()
 
             print('Finished epoch:{} | Loss : {:.4f}'.format(
             epoch_idx + 1,
