@@ -54,6 +54,8 @@ def train(args):
     
     data_loader = DataLoader(im_dataset,
                              batch_size=train_config['ldm_batch_size'],
+                             num_workers=8,
+                             pin_memory=True,
                              shuffle=True)
     
     # Instantiate the model
@@ -104,12 +106,14 @@ def train(args):
             noise_pred = model(noisy_im, t)
             
             loss = criterion(noise_pred, noise)
-            losses.append(loss.item())
+            losses.append(loss)
             loss.backward()
             optimizer.step()
-        print('Finished epoch:{} | Loss : {:.4f}'.format(
+            mean_loss = torch.mean(losses).item()
+
+            print('Finished epoch:{} | Loss : {:.4f}'.format(
             epoch_idx + 1,
-            np.mean(losses)))
+            mean_loss))
         
         torch.save(model.state_dict(), os.path.join(train_config['task_name'],
                                                     train_config['ldm_ckpt_name']))
