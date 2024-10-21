@@ -7,7 +7,7 @@ class ImageNetDatasetEEG(Dataset):
     A dataset class for ImageNet images, optimized for batch loading from a .npz file.
     """
 
-    def __init__(self, im_path, im_size, im_channels, 
+    def __init__(self, split, im_path, im_size, im_channels, 
                  condition_config=None):
         r"""
         Initializes the dataset properties.
@@ -17,6 +17,7 @@ class ImageNetDatasetEEG(Dataset):
         :param im_channels: Number of channels in the images.
         :param condition_config: Configuration for conditioning types.
         """
+        self.split = split
         self.im_size = im_size
         self.im_channels = im_channels
         
