@@ -137,7 +137,7 @@ class DownBlock(nn.Module):
                 in_attn = self.cross_attention_norms[i](in_attn)
                 in_attn = in_attn.transpose(1, 2)
                 assert context.shape[0] == x.shape[0] and context.shape[-1] == self.context_dim
-                context_proj = self.context_proj[i](context)
+                context_proj = self.context_proj[i](context)#Linear Layer 
                 out_attn, _ = self.cross_attentions[i](in_attn, context_proj, context_proj)
                 out_attn = out_attn.transpose(1, 2).reshape(batch_size, channels, h, w)
                 out = out + out_attn

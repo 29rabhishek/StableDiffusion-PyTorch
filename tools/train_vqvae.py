@@ -13,6 +13,7 @@ from torch.utils.data.dataloader import DataLoader
 from dataset.mnist_dataset import MnistDataset
 from dataset.celeb_dataset import CelebDataset
 from dataset.imagenet_dataset import ImageNetDataset
+from dataset.imagenet_dataset_eeg import ImageNetDatasetEEG
 from torch.optim import Adam
 from torchvision.utils import make_grid
 
@@ -54,7 +55,8 @@ def train(args):
     im_dataset_cls = {
         'mnist': MnistDataset,
         'celebhq': CelebDataset,
-        'imagenet': ImageNetDataset
+        'imagenet': ImageNetDataset,
+        'Imagenet_eeg_cond': ImageNetDatasetEEG
     }.get(dataset_config['name'])
     
     im_dataset = im_dataset_cls(split='train',
