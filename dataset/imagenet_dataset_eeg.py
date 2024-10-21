@@ -2,7 +2,7 @@ import numpy as np
 import torchvision
 from torch.utils.data import Dataset
 
-class ImageNetDataset(Dataset):
+class ImageNetDatasetEEG(Dataset):
     r"""
     A dataset class for ImageNet images, optimized for batch loading from a .npz file.
     """
