@@ -7,7 +7,7 @@ class ImageNetDatasetEEG(Dataset):
     A dataset class for ImageNet images, optimized for batch loading from a .npz file.
     """
 
-    def __init__(self, split, im_path, im_size, im_channels, 
+    def __init__(self, split, im_path, im_size, im_channels, use_latents=False, latent_path=None,
                  condition_config=None):
         r"""
         Initializes the dataset properties.
@@ -29,6 +29,17 @@ class ImageNetDatasetEEG(Dataset):
 
         # Conditioning types
         self.condition_types = [] if condition_config is None else condition_config['condition_types']
+
+
+                # Whether to load images and call vae or to load latents
+        if use_latents and latent_path is not None:
+            latent_maps = load_latents(latent_path)
+            if len(latent_maps) == len(self.images):
+                self.use_latents = True
+                self.latent_maps = latent_maps
+                print('Found {} latents'.format(len(self.latent_maps)))
+            else:
+                print('Latents not found')
 
     def __len__(self):
         return len(self.images)
