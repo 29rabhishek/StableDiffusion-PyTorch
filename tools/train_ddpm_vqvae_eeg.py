@@ -62,9 +62,6 @@ def train(args):
                                 im_path=dataset_config['im_path'],
                                 im_size=dataset_config['im_size'],
                                 im_channels=dataset_config['im_channels'],
-                                use_latents=True,
-                                latent_path=os.path.join(train_config['task_name'],
-                                                         train_config['vqvae_latent_dir_name']),
                                 condition_config=condition_config)
     
     data_loader = DataLoader(im_dataset,
