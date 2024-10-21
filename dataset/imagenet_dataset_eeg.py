@@ -26,7 +26,7 @@ class ImageNetDatasetEEG(Dataset):
         self.images = npz_data["images"]
         self.labels = npz_data["labels"]
         self.embeddings = npz_data["embeddings"]
-
+        self.use_latents = False
         # Conditioning types
         self.condition_types = [] if condition_config is None else condition_config['condition_types']
 
