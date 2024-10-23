@@ -32,14 +32,14 @@ class ImageNetDatasetEEG(Dataset):
 
 
                 # Whether to load images and call vae or to load latents
-        if use_latents and latent_path is not None:
-            latent_maps = load_latents(latent_path)
-            if len(latent_maps) == len(self.images):
-                self.use_latents = True
-                self.latent_maps = latent_maps
-                print('Found {} latents'.format(len(self.latent_maps)))
-            else:
-                print('Latents not found')
+        # if use_latents and latent_path is not None:
+        #     latent_maps = load_latents(latent_path)
+        #     if len(latent_maps) == len(self.images):
+        #         self.use_latents = True
+        #         self.latent_maps = latent_maps
+        #         print('Found {} latents'.format(len(self.latent_maps)))
+        #     else:
+        #         print('Latents not found')
 
     def __len__(self):
         return len(self.images)
