@@ -188,7 +188,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Arguments for ddpm image generation with only '
                                                  'text conditioning')
     parser.add_argument('--config', dest='config_path',
-                        default='config/celebhq_text_cond.yaml', type=str)
+                        default='config/imagenet_eeg_cond.yaml', type=str)
     parser.add_argument('--classlabel', default=2, type=int)
     args = parser.parse_args()
     infer(args)
