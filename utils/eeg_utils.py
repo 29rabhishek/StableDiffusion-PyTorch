@@ -3,6 +3,7 @@ from PIL import Image
 import random
 
 def get_eeg_cond_input(label, file_name = "./data/image_eeg_embed/test_embeddings.npz"):
+    # valid top 10 labels {1, 38, 9, 10, 11, 12, 16, 18, 25, 26}
     npz_data = np.load(file_name, mmap_mode='r')
     images = npz_data["images"]
     labels = npz_data["labels"]

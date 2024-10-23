@@ -60,7 +60,6 @@ def sample(model, scheduler, train_config, diffusion_model_config,
     # By default classifier free guidance is disabled
     # Change value in config or change default value here to enable it
     cf_guidance_scale = get_config_value(train_config, 'cf_guidance_scale', 1.0)
-    save_image_from_tensor(orginal_image)
     ################# Sampling Loop ########################
     for i in tqdm(reversed(range(diffusion_config['num_timesteps']))):
         # Get prediction of noise
@@ -95,7 +94,7 @@ def sample(model, scheduler, train_config, diffusion_model_config,
         img.save(os.path.join(train_config['task_name'], 'cond_eeg_samples', 'x0_label_{}_{}.png'.format(label,i)))
         img.close()
     ##############################################################
-    save_image_from_tensor(orginal_image, file_path=os.path.join(train_config['task_name'], 'cond_eeg_samples', f'Orginal_Image_label_{label}.png'))
+    save_image_from_tensor(orginal_image, file_path = os.path.join(train_config['task_name'], 'cond_eeg_samples', f'Orginal_Image_label_{label}.png'))
 
 def infer(args):
     # Read the config file #
