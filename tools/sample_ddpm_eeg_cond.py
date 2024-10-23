@@ -64,13 +64,13 @@ def sample(model, scheduler, train_config, diffusion_model_config,
     for i in tqdm(reversed(range(diffusion_config['num_timesteps']))):
         # Get prediction of noise
         t = (torch.ones((xt.shape[0],)) * i).long().to(device)
-        # noise_pred_cond = model(xt, t, cond_input)
-        
-        # if cf_guidance_scale > 1:
-        #     noise_pred_uncond = model(xt, t, uncond_input)
-        #     noise_pred = noise_pred_uncond + cf_guidance_scale * (noise_pred_cond - noise_pred_uncond)
-        # else:
-        #     noise_pred = noise_pred_cond
+        noise_pred_cond = model(xt, t, cond_input)
+        uncond_input = torch.zeros((1, autoencoder_model_config['z_channels'], im_size, im_size)).to(device)
+        if cf_guidance_scale > 1:
+            noise_pred_uncond = model(xt, t, uncond_input)
+            noise_pred = noise_pred_uncond + cf_guidance_scale * (noise_pred_cond - noise_pred_uncond)
+        else:
+            noise_pred = noise_pred_cond
         
         # Use scheduler to get x0 and xt-1
         noise_pred = model(xt, t, cond_input)
