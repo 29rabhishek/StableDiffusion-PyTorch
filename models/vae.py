@@ -95,11 +95,23 @@ class VAE(nn.Module):
         out = nn.SiLU()(out)
         out = self.encoder_conv_out(out)
         out = self.pre_quant_conv(out)
-        mean, logvar = torch.chunk(out, 2, dim=1)
+        mu, logvar = torch.chunk(out, 2, dim=1)
+        # std = torch.exp(0.5 * logvar)
+        # z = mu + std * torch.randn(mu.shape).to(device=x.device)
+        return mu, logvar
+
+
+    def reparameterize(self, mu, logvar):
+        """
+        Reparameterization trick to sample from N(mu, var) from
+        N(0,1).
+        :param mu: (Tensor) Mean of the latent Gaussian [B x D]
+        :param logvar: (Tensor) Standard deviation of the latent Gaussian [B x D]
+        :return: (Tensor) [B x D]
+        """
         std = torch.exp(0.5 * logvar)
-        z = mean + std * torch.randn(mean.shape).to(device=x.device)
-        return mean, logvar, z
-    
+        eps = torch.randn_like(mu).to(device=mu.device)
+        return eps * std + mu
     
     def decode(self, z):
         out = z
@@ -116,7 +128,8 @@ class VAE(nn.Module):
         return out
 
     def forward(self, x):
-        mu, logvar, z = self.encode(x)
+        mu, logvar = self.encode(x)
+        z = self.reparameterize(mu, logvar)
         out = self.decode(z)
         return out, mu, logvar
     

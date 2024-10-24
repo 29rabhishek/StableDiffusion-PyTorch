@@ -63,7 +63,7 @@ def train(args):
         os.mkdir(train_config['task_name'])
 
     num_epochs = train_config['autoencoder_epochs']
-    recon_criterion = torch.nn.MSELoss()
+    recon_criterion = torch.nn.MSELoss(reduce="sum")
 
     optimizer_g = Adam(model.parameters(), lr=train_config['autoencoder_lr'], betas=(0.5, 0.999))
 
