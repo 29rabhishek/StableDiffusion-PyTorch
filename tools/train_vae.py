@@ -31,7 +31,7 @@ def train(args):
     autoencoder_config = config['autoencoder_params']
     train_config = config['train_params']
 
-    logger = setup_logger("VAE_logger", file_name='vae_logger_6th_aug', save_dir=train_config['task_name'], if_train=True)
+    logger = setup_logger("VAE_logger", file_name='vae_logger_24th_oct', save_dir=train_config['task_name'], if_train=True)
 
     seed = train_config['seed']
     torch.manual_seed(seed)
@@ -61,6 +61,9 @@ def train(args):
 
     if not os.path.exists(train_config['task_name']):
         os.mkdir(train_config['task_name'])
+    #making path to save vae_generated samples
+    if not os.path.exists(os.path.join(train_config['task_name'], 'vae_autoencoder_samples')):
+        os.mkdir(os.path.join(train_config['task_name'], 'vae_autoencoder_samples'))
 
     num_epochs = train_config['autoencoder_epochs']
     recon_criterion = torch.nn.MSELoss(reduce="sum")
@@ -114,8 +117,8 @@ def train(args):
 
             grid = make_grid(torch.cat([save_input, save_output], dim=0), nrow=sample_size)
             img = torchvision.transforms.ToPILImage()(grid)
-            img_save_path = os.path.join(train_config['task_name'], 'vqvae_autoencoder_samples')
-            os.makedirs(img_save_path, exist_ok=True)
+            img_save_path = os.path.join(train_config['task_name'], 'vae_autoencoder_samples')
+            # os.makedirs(img_save_path, exist_ok=True)
             img.save(os.path.join(img_save_path, f'current_autoencoder_sample_{img_save_count}.png'))
             img_save_count += 1
             img.close()
